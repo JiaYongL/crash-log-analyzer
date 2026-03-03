@@ -16,6 +16,7 @@ import argparse
 import json
 import os
 import sys
+import pandas as pd
 
 # Allow running from the project root without installing as a package
 sys.path.insert(0, os.path.dirname(__file__))
@@ -162,8 +163,12 @@ def cmd_analyze_directory(root: str, model: str) -> None:
     with open(output_path, "w", encoding="utf-8") as fh:
         json.dump(results, fh, ensure_ascii=False, indent=2)
 
+    output_csv = os.path.join(root, "analysis_results.csv")
+    df = pd.DataFrame(results)
+    df.to_csv(output_csv, index=False)
+
     print(f"\n{'=' * 60}")
-    print(f"✅ Analysis complete — results saved to {output_path}")
+    print(f"✅ Analysis complete — results saved to {output_path} and {output_csv}")
     print(f"{'=' * 60}")
 
 
