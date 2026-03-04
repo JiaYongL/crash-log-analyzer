@@ -26,3 +26,8 @@ Thumbs.db
 # Analysis outputs
 batch_results.json
 analysis_results.json
+
+# frontend
+node_modules/
+package-lock.json
+dist/*
