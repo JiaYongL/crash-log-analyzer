@@ -257,36 +257,6 @@ byte counts, argument signatures, and return types.
 | `exception`      | First app Java frame (skip native)    | `sun.lwawt.macosx.CInputMethod.insertText` |
 | `unknown`        | —                   | `null`                                        |
 
-### `current_thread`
-Thread where the crash occurred.
-
-| Log type    | Source                                           | Example              |
-|-------------|--------------------------------------------------|----------------------|
-| `hs_err`    | `# Current thread: …` — extract name in quotes  | `main`               |
-| `oom`       | No name available                                | `null`               |
-| `exception` | Thread name from `Exception in <ThreadName>:`   | `NSApplicationAWT`   |
-| `unknown`   | —                                                | `null`               |
-
-### `top_frame_method`
-The topmost method in the stack trace, as a stable readable identifier.
-Strip addresses, offsets, and argument signatures.
-
-| Log type    | Source             | Example                                                   |
-|-------------|--------------------|-----------------------------------------------------------|
-| `hs_err`    | Problematic frame  | same value as `frame_fingerprint`                         |
-| `oom`       | No frame available | `null`                                                    |
-| `exception` | First stack line   | `java.awt.event.InputMethodEvent.getMostRecentEventTimeForSource` |
-| `unknown`   | —                  | `null`                                                    |
-
-> **Note:** For `exception` logs, `top_frame_method` is the literal top of the stack
-> (where execution was), while `frame_fingerprint` is the first *application-owned*
-> Java frame (where the bug is actionable).
-
-### `evidence`
-1–5 verbatim log lines that directly support the values above.
-Use the minimum set that justifies log type, exception type, frame, and thread.
-Do not paraphrase or truncate lines. Omit purely informational lines.
-
 ## Output
 Return **only** valid JSON with no surrounding text or markdown fences:
 
@@ -295,11 +265,8 @@ Return **only** valid JSON with no surrounding text or markdown fences:
   "exception_type": "...",
   "frame_type": "...",
   "frame_fingerprint": "...",
-  "current_thread": "...",
-  "top_frame_method": "...",
-  "evidence": [
-    "verbatim log line 1",
-    "verbatim log line 2"
-  ]
+  "current_thread": "the name of the current thread if available, otherwise null",
+  "top_frame_method": "the method/function name of the top stack frame if available, otherwise null",
+  "summary": "a concise summary of how the crash happen in 1-5 sentences",
 }
 """
