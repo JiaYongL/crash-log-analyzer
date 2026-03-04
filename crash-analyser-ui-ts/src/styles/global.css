@@ -1,0 +1,113 @@
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&family=Syne:wght@400;700;800&display=swap');
+
+/* ── Reset ────────────────────────────────────────────────────────────────── */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+/* ── Design tokens ────────────────────────────────────────────────────────── */
+:root {
+  --bg:        #080b10;
+  --surface:   #0e1420;
+  --surface2:  #141c2b;
+  --border:    #1e2d45;
+  --amber:     #f5a623;
+  --amber-dim: #a86e10;
+  --green:     #39d98a;
+  --red:       #f05050;
+  --text:      #c8d6f0;
+  --text-dim:  #5a7090;
+  --mono:      'JetBrains Mono', monospace;
+  --sans:      'Syne', sans-serif;
+}
+
+/* ── Base ─────────────────────────────────────────────────────────────────── */
+html,
+body,
+#root {
+  min-height: 100vh;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--mono);
+  font-size: 14px;
+  line-height: 1.6;
+  overflow-x: hidden;
+}
+
+/* ── Decorative grid texture ─────────────────────────────────────────────── */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(245, 166, 35, .04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(245, 166, 35, .04) 1px, transparent 1px);
+  background-size: 40px 40px;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Ambient glow orb */
+body::after {
+  content: '';
+  position: fixed;
+  top: -20vh;
+  left: -10vw;
+  width: 60vw;
+  height: 60vw;
+  background: radial-gradient(circle, rgba(245, 166, 35, .07) 0%, transparent 70%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* ── Scrollbars ───────────────────────────────────────────────────────────── */
+::-webkit-scrollbar          { width: 4px; }
+::-webkit-scrollbar-track    { background: transparent; }
+::-webkit-scrollbar-thumb    { background: var(--border); border-radius: 99px; }
+
+/* ── Reusable animation helpers ──────────────────────────────────────────── */
+@keyframes slideIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.anim-slide { animation: slideIn .25s ease both; }
+.anim-fade  { animation: fadeIn  .20s ease both; }
+
+/* ── DropZone browse buttons ──────────────────────────────────────────────── */
+.browse-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 9px 18px;
+  border-radius: 8px;
+  border: 1.5px solid var(--border);
+  background: var(--surface2);
+  color: var(--text);
+  font-family: var(--mono);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color .15s, background .15s, color .15s;
+  pointer-events: all;
+}
+
+.browse-btn:hover:not(:disabled) {
+  border-color: var(--amber);
+  color: var(--amber);
+  background: rgba(245, 166, 35, .06);
+}
+
+.browse-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
