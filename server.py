@@ -199,16 +199,16 @@ def _build_excel(rows: list[dict]) -> bytes:
 
     # ── Column definitions ──────────────────────────────────────────────────
     COLUMNS = [
-        ("Log Type",            "log_type",        14),
+        ("Log Type",            "log_type",        12),
         ("Exception Type",      "exception_type",  30),
         ("Frame Type",          "frame_type",      12),
-        ("Frame Fingerprint",   "frame_fingerprint", 40),
+        ("Frame Fingerprint",   "frame_fingerprint", 24),
         ("Current Thread",      "current_thread",  24),
-        ("Top Frame Method",    "top_frame_method", 40)
+        ("Top Frame Method",    "top_frame_method", 60)
     ]
 
     # ── Header row ──────────────────────────────────────────────────────────
-    header_font  = Font(name="Arial", bold=True, color=HEADER_FG, size=11)
+    header_font  = Font(name="宋体", bold=True, color=HEADER_FG, size=11)
     header_fill  = PatternFill("solid", fgColor=DARK)
     header_align = Alignment(horizontal="center", vertical="center", wrap_text=True)
 
@@ -220,15 +220,15 @@ def _build_excel(rows: list[dict]) -> bytes:
         cell.alignment = header_align
         ws.column_dimensions[get_column_letter(col_idx)].width = width
 
-    ws.row_dimensions[1].height = 30
+    ws.row_dimensions[1].height = 13.5
 
     # ── Data rows ────────────────────────────────────────────────────────────
-    body_font  = Font(name="Arial", size=10)
+    body_font  = Font(name="宋体", size=11)
     alt_fill   = PatternFill("solid", fgColor=ALT_ROW)
     body_align = Alignment(vertical="top", wrap_text=True)
 
     # Accent for error cells
-    err_font = Font(name="Arial", size=10, color=ACCENT, bold=True)
+    err_font = Font(name="宋体", size=11, color=ACCENT, bold=True)
 
     for row_idx, row in enumerate(rows, start=2):
         fill = alt_fill if row_idx % 2 == 0 else PatternFill()
@@ -250,9 +250,10 @@ def _build_excel(rows: list[dict]) -> bytes:
             if fill.fill_type:
                 cell.fill = fill
 
-        ws.row_dimensions[row_idx].height = max(
-            60, 15 * (str(row.get("evidence", "")).count("\n") + 1)
-        )
+        ws.row_dimensions[row_idx].height = 13.5
+        # max(
+        #     30, 15 * (str(row.get("evidence", "")).count("\n") + 1)
+        # )
 
     # ── Freeze header & add auto-filter ────────────────────────────────────
     ws.freeze_panes = "A2"
