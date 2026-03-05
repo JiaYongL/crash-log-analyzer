@@ -138,8 +138,6 @@ def _analyze_groups(
             traceback.print_exc()
 
         rows.append({
-            "group": group_key,
-            "files_analysed": len(selected),
             **result,
         })
 
@@ -156,11 +154,34 @@ def _merge_heads(files: list[str]) -> str:
     return "".join(parts)
 
 
+def _sort_rows(rows: list[dict]) -> list[dict]:
+    """
+    Sort analysis rows for easier reading in Excel.
+
+    Primary   → log_type       (alphabetical; blank rows last)
+    Secondary → exception_type (alphabetical within the same log type)
+    Tertiary  → group          (alphabetical directory name)
+
+    Rows that failed analysis (have an "error" key) sink to the bottom.
+    """
+    def _key(row: dict) -> tuple[str, str, str, str, str]:
+        log_type = (row.get("log_type") or "").lower()
+        exception_type = (row.get("exception_type") or "").lower()
+        frame_type = (row.get("frame_type") or "").lower()
+        frame_fingerprint = (row.get("frame_fingerprint") or "").lower()
+        current_thread = (row.get("current_thread") or "").lower()
+        return (log_type, exception_type, frame_type, frame_fingerprint, current_thread)
+
+    return sorted(rows, key=_key)
+
 def _build_excel(rows: list[dict]) -> bytes:
     """Build an Excel workbook from the analysis rows and return raw bytes."""
     import openpyxl
     from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
     from openpyxl.utils import get_column_letter
+
+    # Sort rows so the sheet is immediately readable without manual filtering.
+    rows = _sort_rows(rows)
 
     wb = openpyxl.Workbook()
     ws = wb.active
@@ -178,16 +199,12 @@ def _build_excel(rows: list[dict]) -> bytes:
 
     # ── Column definitions ──────────────────────────────────────────────────
     COLUMNS = [
-        ("Group / Directory",   "group",           28),
-        ("Files Analysed",      "files_analysed",  14),
         ("Log Type",            "log_type",        14),
         ("Exception Type",      "exception_type",  30),
         ("Frame Type",          "frame_type",      12),
         ("Frame Fingerprint",   "frame_fingerprint", 40),
         ("Current Thread",      "current_thread",  24),
-        ("Top Frame Method",    "top_frame_method", 40),
-        ("Evidence",            "evidence",        60),
-        ("Error",               "error",           40),
+        ("Top Frame Method",    "top_frame_method", 40)
     ]
 
     # ── Header row ──────────────────────────────────────────────────────────
