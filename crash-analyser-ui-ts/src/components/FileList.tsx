@@ -1,123 +1,47 @@
 import { formatSize } from "../utils/fileSystem";
 
-// ─── FileItem ─────────────────────────────────────────────────────────────────
-
-interface FileItemProps {
-  file: File;
-  isLast: boolean;
-}
-
-function FileItem({ file, isLast }: FileItemProps): JSX.Element {
+function FileItem({ file, isLast }: { file: File; isLast: boolean }): JSX.Element {
   const path = file.webkitRelativePath || file.name;
-
   return (
     <div
       title={path}
-      style={{
-        display: "flex",
-        alignItems: "center",
-        gap: 12,
-        padding: "9px 18px",
-        fontSize: 12,
+      style={{ display: "flex", alignItems: "center", gap: 10, padding: "7px 16px",
         borderBottom: isLast ? "none" : "1px solid var(--border)",
-        transition: "background .15s",
-      }}
-      onMouseEnter={(e) =>
-        ((e.currentTarget as HTMLDivElement).style.background = "var(--surface2)")
-      }
-      onMouseLeave={(e) =>
-        ((e.currentTarget as HTMLDivElement).style.background = "transparent")
-      }
+        transition: "background .12s", cursor: "default" }}
+      onMouseEnter={(e) => ((e.currentTarget as HTMLDivElement).style.background = "var(--surface-alt)")}
+      onMouseLeave={(e) => ((e.currentTarget as HTMLDivElement).style.background = "transparent")}
     >
-      {/* Accent dot */}
-      <div
-        style={{
-          width: 6,
-          height: 6,
-          borderRadius: "50%",
-          background: "var(--amber)",
-          flexShrink: 0,
-        }}
-      />
-
-      {/* Relative path */}
-      <span
-        style={{
-          color: "var(--text)",
-          flex: 1,
-          overflow: "hidden",
-          textOverflow: "ellipsis",
-          whiteSpace: "nowrap",
-        }}
-      >
+      {/* File dot */}
+      <div style={{ width: 6, height: 6, borderRadius: "50%", background: "var(--accent)", opacity: .65, flexShrink: 0 }}/>
+      <span style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+        fontFamily: "var(--mono)", fontSize: 12, color: "var(--text-mid)" }}>
         {path}
       </span>
-
-      {/* File size */}
-      <span style={{ color: "var(--text-dim)", fontSize: 11, flexShrink: 0 }}>
-        {formatSize(file.size)}
-      </span>
+      <span style={{ fontSize: 11, color: "var(--text-dim)", flexShrink: 0 }}>{formatSize(file.size)}</span>
     </div>
   );
 }
 
-// ─── FileList ─────────────────────────────────────────────────────────────────
-
-interface FileListProps {
-  files: File[];
-}
-
-/**
- * Renders the scrollable panel of detected log files.
- * Returns `null` when `files` is empty so the caller doesn't need to guard it.
- */
-export default function FileList({ files }: FileListProps): JSX.Element | null {
-  if (files.length === 0) return null;
-
+export default function FileList({ files }: { files: File[] }): JSX.Element | null {
+  if (!files.length) return null;
   return (
-    <div
-      className="anim-slide"
-      style={{
-        background: "var(--surface)",
-        border: "1px solid var(--border)",
-        borderRadius: 12,
-        overflow: "hidden",
-      }}
-    >
+    <div className="anim-slide" style={{ borderRadius: 12, border: "1px solid var(--border)",
+      background: "var(--surface)", overflow: "hidden", boxShadow: "var(--shadow-xs)" }}>
       {/* Header */}
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          padding: "14px 18px",
-          borderBottom: "1px solid var(--border)",
-          background: "var(--surface2)",
-        }}
-      >
-        <span
-          style={{
-            fontSize: 11,
-            letterSpacing: ".1em",
-            textTransform: "uppercase",
-            color: "var(--text-dim)",
-          }}
-        >
-          Detected log files
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between",
+        padding: "10px 16px", borderBottom: "1px solid var(--border)", background: "var(--surface-alt)" }}>
+        <span style={{ fontSize: 12, fontWeight: 500, color: "var(--text-mid)", letterSpacing: ".02em" }}>
+          Selected files
         </span>
-        <span style={{ fontSize: 12, color: "var(--amber)", fontWeight: 700 }}>
-          {files.length} file{files.length !== 1 ? "s" : ""}
+        <span style={{ fontSize: 12, fontWeight: 600, color: "var(--accent)",
+          background: "var(--accent-soft)", border: "1px solid rgba(217,119,87,.2)",
+          padding: "1px 9px", borderRadius: 20 }}>
+          {files.length} {files.length === 1 ? "file" : "files"}
         </span>
       </div>
-
-      {/* Scrollable rows */}
-      <div style={{ maxHeight: 220, overflowY: "auto" }}>
+      <div style={{ maxHeight: 200, overflowY: "auto" }}>
         {files.map((f, i) => (
-          <FileItem
-            key={`${f.webkitRelativePath || f.name}-${i}`}
-            file={f}
-            isLast={i === files.length - 1}
-          />
+          <FileItem key={`${f.webkitRelativePath || f.name}-${i}`} file={f} isLast={i === files.length - 1}/>
         ))}
       </div>
     </div>

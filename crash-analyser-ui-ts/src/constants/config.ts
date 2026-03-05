@@ -9,9 +9,6 @@ export const DEFAULT_MODEL = "qwen3:4b"             as const;
 export const LOG_PATTERNS: readonly RegExp[] = [
   /^jbr_err/i,
   /^java_error/i,
-  /^hs_err_pid/i,
-  /\.log$/i,
-  /\.txt$/i,
 ] as const;
 
 /** Returns `true` when `name` matches any known crash-log pattern. */

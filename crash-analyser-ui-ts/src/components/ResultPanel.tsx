@@ -1,131 +1,63 @@
 import { IconCheck, IconDownload } from "../icons";
 
-// ─── Props ────────────────────────────────────────────────────────────────────
+interface Props { fileCount: number; downloadUrl: string; downloadName: string; onReset: () => void; }
 
-interface ResultPanelProps {
-  fileCount:    number;
-  downloadUrl:  string;
-  downloadName: string;
-  onReset:      () => void;
-}
-
-// ─── ResultPanel ──────────────────────────────────────────────────────────────
-
-/**
- * Success state: check icon, summary, Excel download link, and reset button.
- */
-export default function ResultPanel({
-  fileCount,
-  downloadUrl,
-  downloadName,
-  onReset,
-}: ResultPanelProps): JSX.Element {
+export default function ResultPanel({ fileCount, downloadUrl, downloadName, onReset }: Props): JSX.Element {
   return (
-    <div
-      className="anim-slide"
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        gap: 16,
-        textAlign: "center",
-      }}
-    >
-      {/* Success icon */}
-      <div
-        style={{
-          width: 72,
-          height: 72,
-          borderRadius: "50%",
-          background: "rgba(57,217,138,.12)",
-          border: "1.5px solid rgba(57,217,138,.3)",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-        }}
-      >
-        <IconCheck />
-      </div>
+    <div className="anim-slide" style={{ borderRadius: 14, border: "1px solid var(--border)",
+      background: "var(--surface)", boxShadow: "var(--shadow-md)", overflow: "hidden" }}>
 
-      <h2
-        style={{
-          fontFamily: "var(--sans)",
-          fontSize: 22,
-          fontWeight: 800,
-          color: "#eaf0ff",
-        }}
-      >
-        Analysis complete
-      </h2>
+      {/* Top accent stripe */}
+      <div style={{ height: 3, background: "linear-gradient(90deg, var(--accent-dark), var(--accent))" }}/>
 
-      <p style={{ color: "var(--text-dim)", fontSize: 13, maxWidth: 380 }}>
-        Analysed {fileCount} log file{fileCount !== 1 ? "s" : ""}. Your Excel
-        report is ready.
-      </p>
+      <div style={{ padding: "32px 28px", display: "flex", flexDirection: "column", alignItems: "center", gap: 16, textAlign: "center" }}>
+        {/* Check badge */}
+        <div style={{ width: 58, height: 58, borderRadius: "50%",
+          background: "var(--green-soft)", border: "1.5px solid rgba(42,122,86,.2)",
+          display: "flex", alignItems: "center", justifyContent: "center",
+          color: "var(--green)" }}>
+          <IconCheck/>
+        </div>
 
-      {/* Download link styled as a button */}
-      <a
-        href={downloadUrl}
-        download={downloadName}
-        style={{
-          display: "inline-flex",
-          alignItems: "center",
-          gap: 10,
-          padding: "14px 32px",
-          borderRadius: 10,
-          background: "var(--green)",
-          color: "#000",
-          fontFamily: "var(--mono)",
-          fontSize: 14,
-          fontWeight: 700,
+        <div>
+          <h2 style={{ fontFamily: "var(--serif)", fontSize: 24, fontWeight: 600,
+            color: "var(--text)", letterSpacing: "-.02em", marginBottom: 6 }}>
+            Analysis complete
+          </h2>
+          <p style={{ fontSize: 14, color: "var(--text-mid)", maxWidth: 340 }}>
+            {fileCount} log {fileCount === 1 ? "file" : "files"} analysed successfully.
+            Your Excel report is ready to download.
+          </p>
+        </div>
+
+        {/* Download */}
+        <a href={downloadUrl} download={downloadName} style={{
+          display: "inline-flex", alignItems: "center", gap: 8,
+          padding: "11px 28px", borderRadius: 9,
+          background: "var(--accent)", color: "#fff",
+          fontFamily: "var(--sans)", fontSize: 14, fontWeight: 600,
           textDecoration: "none",
-          boxShadow: "0 8px 24px rgba(57,217,138,.2)",
-          transition: "opacity .15s, transform .15s, box-shadow .2s",
+          boxShadow: "0 3px 12px rgba(217,119,87,.3)",
+          transition: "background .15s, box-shadow .15s, transform .15s",
         }}
-        onMouseEnter={(e) => {
-          const el = e.currentTarget as HTMLAnchorElement;
-          el.style.opacity   = ".9";
-          el.style.transform = "translateY(-2px)";
-          el.style.boxShadow = "0 12px 32px rgba(57,217,138,.3)";
-        }}
-        onMouseLeave={(e) => {
-          const el = e.currentTarget as HTMLAnchorElement;
-          el.style.opacity   = "1";
-          el.style.transform = "none";
-          el.style.boxShadow = "0 8px 24px rgba(57,217,138,.2)";
-        }}
-      >
-        <IconDownload /> Download .xlsx
-      </a>
+          onMouseEnter={(e) => { const el = e.currentTarget as HTMLAnchorElement; el.style.background = "var(--accent-dark)"; el.style.transform = "translateY(-1px)"; el.style.boxShadow = "0 6px 18px rgba(217,119,87,.35)"; }}
+          onMouseLeave={(e) => { const el = e.currentTarget as HTMLAnchorElement; el.style.background = "var(--accent)"; el.style.transform = "none"; el.style.boxShadow = "0 3px 12px rgba(217,119,87,.3)"; }}
+        >
+          <IconDownload/> Download .xlsx
+        </a>
 
-      {/* Reset */}
-      <button
-        type="button"
-        onClick={onReset}
-        style={{
-          background: "none",
-          border: "1px solid var(--border)",
-          borderRadius: 8,
-          padding: "8px 18px",
-          color: "var(--text-dim)",
-          fontFamily: "var(--mono)",
-          fontSize: 12,
-          cursor: "pointer",
-          transition: "border-color .2s, color .2s",
+        {/* Reset */}
+        <button type="button" onClick={onReset} style={{
+          background: "none", border: "none", padding: "4px 8px",
+          fontSize: 13, color: "var(--text-dim)", cursor: "pointer",
+          fontFamily: "var(--sans)", transition: "color .12s",
         }}
-        onMouseEnter={(e) => {
-          const el = e.currentTarget as HTMLButtonElement;
-          el.style.borderColor = "var(--text-dim)";
-          el.style.color       = "var(--text)";
-        }}
-        onMouseLeave={(e) => {
-          const el = e.currentTarget as HTMLButtonElement;
-          el.style.borderColor = "var(--border)";
-          el.style.color       = "var(--text-dim)";
-        }}
-      >
-        Analyse another batch
-      </button>
+          onMouseEnter={(e) => ((e.currentTarget as HTMLButtonElement).style.color = "var(--text)")}
+          onMouseLeave={(e) => ((e.currentTarget as HTMLButtonElement).style.color = "var(--text-dim)")}
+        >
+          Start a new analysis →
+        </button>
+      </div>
     </div>
   );
 }

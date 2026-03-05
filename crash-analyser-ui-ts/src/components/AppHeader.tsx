@@ -1,56 +1,45 @@
-/**
- * AppHeader — purely presentational.
- * Renders the page badge, headline, and subtitle.  No props, no state.
- */
 export default function AppHeader(): JSX.Element {
   return (
-    <header style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-      {/* Badge */}
-      <div
-        style={{
-          display: "inline-flex",
-          alignItems: "center",
-          gap: 8,
-          fontSize: 11,
-          fontWeight: 500,
-          letterSpacing: ".12em",
-          textTransform: "uppercase",
-          color: "var(--amber)",
-          marginBottom: 8,
-        }}
-      >
-        <span
-          style={{
-            width: 20,
-            height: 1,
-            background: "var(--amber)",
-            display: "inline-block",
-          }}
-        />
-        Ollama · IDE Diagnostics
+    <header style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+      {/* Wordmark row */}
+      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+        {/* Claude-style logo mark — two overlapping diamonds */}
+        <svg width="30" height="30" viewBox="0 0 30 30" fill="none">
+          <rect width="30" height="30" rx="7" fill="#d97757"/>
+          <path d="M15 5.5 L20.5 11 L15 16.5 L9.5 11 Z" fill="white" fillOpacity=".92"/>
+          <path d="M15 13.5 L20.5 19 L15 24.5 L9.5 19 Z" fill="white" fillOpacity=".55"/>
+        </svg>
+        <span style={{
+          fontFamily: "var(--sans)", fontWeight: 600, fontSize: 14.5,
+          color: "var(--text-mid)", letterSpacing: "-.01em",
+        }}>
+          Crash Analyser
+        </span>
       </div>
 
-      {/* Headline */}
-      <h1
-        style={{
-          fontFamily: "var(--sans)",
-          fontSize: "clamp(32px, 5vw, 52px)",
-          fontWeight: 800,
-          lineHeight: 1.1,
-          color: "#eaf0ff",
-          letterSpacing: "-.02em",
-        }}
-      >
-        Crash Log
-        <br />
-        <span style={{ color: "var(--amber)" }}>Analyser</span>
-      </h1>
-
-      {/* Subtitle */}
-      <p style={{ color: "var(--text-dim)", fontSize: 13, maxWidth: 480 }}>
-        Upload individual log files or an entire folder. The tool groups them,
-        runs AI analysis, and returns a formatted Excel report.
-      </p>
+      {/* Large serif headline — Claude's signature style */}
+      <div>
+        <h1 style={{
+          fontFamily: "var(--serif)",
+          fontSize: "clamp(26px, 3.8vw, 42px)",
+          fontWeight: 600,
+          lineHeight: 1.18,
+          color: "var(--text)",
+          letterSpacing: "-.025em",
+          marginBottom: 10,
+        }}>
+          Analyse IDE crash logs with AI
+        </h1>
+        <p style={{
+          fontSize: 15,
+          color: "var(--text-mid)",
+          maxWidth: 500,
+          lineHeight: 1.65,
+        }}>
+          Upload log files or a folder. The tool groups crashes by directory,
+          identifies root causes, and exports a structured Excel report.
+        </p>
+      </div>
     </header>
   );
 }
