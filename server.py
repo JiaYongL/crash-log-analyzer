@@ -6,7 +6,16 @@ Endpoints
 POST /analyze
     Accepts multipart file uploads (one or more log files).
     Groups files by their top-level directory path, analyses each group with
-    the Ollama-backed CrashLogAnalyzer, and returns an Excel (.xlsx) report.
+    the Ollama-backed CrashLogAnalyzer, and returns a ZIP archive containing:
+
+      crash_analysis_<timestamp>.xlsx   — Excel report (sorted, styled)
+      grouped/
+        <log_type>/                     — omitted if null/empty
+          <exception_type>/             — omitted if null/empty
+            <frame_fingerprint>/        — omitted if null/empty
+              <original_group_dir>/
+                <uuid_subfolder>/
+                  <all uploaded files>
 
 GET /health
     Simple liveness check.
@@ -20,9 +29,11 @@ from __future__ import annotations
 import io
 import json
 import os
+import re
 import sys
 import tempfile
 import traceback
+import zipfile
 from collections import defaultdict
 from datetime import datetime
 
@@ -39,7 +50,7 @@ app.config["MAX_CONTENT_LENGTH"] = 512 * 1024 * 1024  # 512 MB
 
 
 # ---------------------------------------------------------------------------
-# CORS — simple manual header injection (no extra dependency needed)
+# CORS
 # ---------------------------------------------------------------------------
 
 @app.after_request
@@ -76,7 +87,10 @@ def analyze():
     if not uploaded:
         return jsonify({"error": "No files received"}), 400
 
-    # Write files into a temp directory, preserving relative paths
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    xlsx_filename = f"crash_analysis_{timestamp}.xlsx"
+    zip_filename  = f"crash_analysis_{timestamp}.zip"
+
     with tempfile.TemporaryDirectory() as tmp_root:
         groups: dict[str, list[str]] = defaultdict(list)
 
@@ -96,21 +110,22 @@ def analyze():
         analyzer = CrashLogAnalyzer(model=model)
         rows = _analyze_groups(analyzer, groups, tmp_root)
 
-    # Generate Excel in memory
-    xlsx_bytes = _build_excel(rows)
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    filename = f"crash_analysis_{timestamp}.xlsx"
+        # Build Excel
+        xlsx_bytes = _build_excel(rows)
+
+        # Build ZIP (Excel + reorganised directory tree) while tmp_root exists
+        zip_bytes = _build_grouped_zip(rows, tmp_root, xlsx_bytes, xlsx_filename)
 
     return send_file(
-        io.BytesIO(xlsx_bytes),
-        mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        io.BytesIO(zip_bytes),
+        mimetype="application/zip",
         as_attachment=True,
-        download_name=filename,
+        download_name=zip_filename,
     )
 
 
 # ---------------------------------------------------------------------------
-# Helpers
+# Helpers — analysis
 # ---------------------------------------------------------------------------
 
 def _analyze_groups(
@@ -139,6 +154,8 @@ def _analyze_groups(
 
         rows.append({
             **result,
+            "group": group_key,
+            "files_analysed": len(selected),
         })
 
     return rows
@@ -153,6 +170,10 @@ def _merge_heads(files: list[str]) -> str:
         parts.append(f"\n\n=== File: {os.path.basename(path)} ===\n{head}")
     return "".join(parts)
 
+
+# ---------------------------------------------------------------------------
+# Helpers — sorting
+# ---------------------------------------------------------------------------
 
 def _sort_rows(rows: list[dict]) -> list[dict]:
     """
@@ -174,6 +195,100 @@ def _sort_rows(rows: list[dict]) -> list[dict]:
 
     return sorted(rows, key=_key)
 
+
+# ---------------------------------------------------------------------------
+# Helpers — grouped ZIP
+# ---------------------------------------------------------------------------
+
+# Characters that are unsafe in cross-platform directory names.
+_UNSAFE_RE = re.compile(r'[<>:"/\\|?*\x00-\x1f]')
+
+
+def _sanitize_segment(value: str) -> str:
+    """
+    Strip characters that are unsafe in directory names on Windows/macOS/Linux,
+    and truncate to 120 chars so paths don't exceed OS limits.
+    """
+    safe = _UNSAFE_RE.sub("_", value).strip(". ")
+    return safe[:120] if safe else "_"
+
+
+def _build_grouped_zip(
+    rows: list[dict],
+    tmp_root: str,
+    xlsx_bytes: bytes,
+    xlsx_filename: str,
+) -> bytes:
+    """
+    Build an in-memory ZIP that contains:
+
+    1. The Excel report at the archive root.
+    2. A ``grouped/`` tree where each original crash directory is nested under
+       its analysis result segments::
+
+         grouped/
+           <log_type>/              ← omitted when null / empty
+             <exception_type>/      ← omitted when null / empty
+               <frame_fingerprint>/ ← omitted when null / empty
+                 <original_group>/
+                   <uuid_subfolder>/
+                     file.log
+                     ...
+
+    Any segment whose analysis value is null, empty, or whitespace-only is
+    skipped so the structure stays clean.
+    """
+    buf = io.BytesIO()
+
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
+        # ── Excel at archive root ──────────────────────────────────────────
+        zf.writestr(xlsx_filename, xlsx_bytes)
+
+        # ── Reorganised directory tree ─────────────────────────────────────
+        for row in rows:
+            group = (row.get("group") or "").strip()
+            if not group:
+                continue
+
+            src_dir = os.path.join(tmp_root, group)
+            if not os.path.isdir(src_dir):
+                # Single-file group or missing directory — skip silently.
+                continue
+
+            # Build the prefix path segments, omitting any empty/null values.
+            segments = ["grouped", row.get("log_type", "").strip()]
+            dir_name = []
+            for key in ("exception_type", "frame_fingerprint"):
+                raw = (row.get(key) or "").strip()
+                if raw:
+                    dir_name.append(_sanitize_segment(raw))
+            segments.append("+".join(dir_name))  # always include the original group dir name
+
+            prefix = "/".join(segments)  # e.g. "grouped/hs_err/EXCEPTION.../chrome_elf.dll/5.1.1.840_..."
+
+            # Walk the source directory and add every file to the archive.
+            for dirpath, _dirs, filenames in os.walk(src_dir):
+                for fname in filenames:
+                    abs_path = os.path.join(dirpath, fname)
+
+                    # Relative path from tmp_root: "group/uuid/file.log"
+                    rel = os.path.relpath(abs_path, tmp_root).replace(os.sep, "/")
+
+                    # Strip the leading group component (already in `segments`)
+                    # so we don't double-up the group dir name.
+                    rel_parts = rel.split("/")           # ["group", "uuid", "file.log"]
+                    suffix    = "/".join(rel_parts[1:])  # "uuid/file.log"
+
+                    arc_path = f"{prefix}/{suffix}"
+                    zf.write(abs_path, arc_path)
+
+    return buf.getvalue()
+
+
+# ---------------------------------------------------------------------------
+# Helpers — Excel
+# ---------------------------------------------------------------------------
+
 def _build_excel(rows: list[dict]) -> bytes:
     """Build an Excel workbook from the analysis rows and return raw bytes."""
     import openpyxl
@@ -194,66 +309,61 @@ def _build_excel(rows: list[dict]) -> bytes:
     ALT_ROW    = "F4F6FA"
     BORDER_CLR = "D0D5E0"
 
-    thin = Side(style="thin", color=BORDER_CLR)
+    thin   = Side(style="thin", color=BORDER_CLR)
     border = Border(left=thin, right=thin, top=thin, bottom=thin)
 
     # ── Column definitions ──────────────────────────────────────────────────
     COLUMNS = [
-        ("Log Type",            "log_type",        12),
-        ("Exception Type",      "exception_type",  30),
-        ("Frame Type",          "frame_type",      12),
-        ("Frame Fingerprint",   "frame_fingerprint", 24),
-        ("Current Thread",      "current_thread",  24),
-        ("Top Frame Method",    "top_frame_method", 60)
+        ("Log Type",            "log_type",          14),
+        ("Exception Type",      "exception_type",    30),
+        ("Frame Type",          "frame_type",        12),
+        ("Frame Fingerprint",   "frame_fingerprint", 40),
+        ("Current Thread",      "current_thread",    24),
+        ("Top Frame Method",    "top_frame_method",  40),
+        ("Evidence",            "evidence",          60),
+        ("Error",               "error",             40),
+        ("Group / Directory",   "group",             28),
+        ("Files Analysed",      "files_analysed",    14),
     ]
 
-    # ── Header row ──────────────────────────────────────────────────────────
-    header_font  = Font(name="宋体", bold=True, color=HEADER_FG, size=11)
+    header_font  = Font(name="Arial", bold=True, color=HEADER_FG, size=11)
     header_fill  = PatternFill("solid", fgColor=DARK)
     header_align = Alignment(horizontal="center", vertical="center", wrap_text=True)
 
     for col_idx, (label, _, width) in enumerate(COLUMNS, start=1):
         cell = ws.cell(row=1, column=col_idx, value=label)
-        cell.font   = header_font
-        cell.fill   = header_fill
-        cell.border = border
+        cell.font      = header_font
+        cell.fill      = header_fill
+        cell.border    = border
         cell.alignment = header_align
         ws.column_dimensions[get_column_letter(col_idx)].width = width
 
-    ws.row_dimensions[1].height = 13.5
+    ws.row_dimensions[1].height = 30
 
-    # ── Data rows ────────────────────────────────────────────────────────────
-    body_font  = Font(name="宋体", size=11)
+    body_font  = Font(name="Arial", size=10)
     alt_fill   = PatternFill("solid", fgColor=ALT_ROW)
     body_align = Alignment(vertical="top", wrap_text=True)
-
-    # Accent for error cells
-    err_font = Font(name="宋体", size=11, color=ACCENT, bold=True)
+    err_font   = Font(name="Arial", size=10, color=ACCENT, bold=True)
 
     for row_idx, row in enumerate(rows, start=2):
         fill = alt_fill if row_idx % 2 == 0 else PatternFill()
         for col_idx, (_, key, _) in enumerate(COLUMNS, start=1):
             value = row.get(key, "")
-            # Flatten list values (e.g. evidence array)
             if isinstance(value, list):
                 value = "\n".join(str(v) for v in value)
             elif value is None:
                 value = ""
 
-            cell = ws.cell(row=row_idx, column=col_idx, value=str(value) if value != "" else "")
-            cell.border = border
+            cell           = ws.cell(row=row_idx, column=col_idx, value=str(value) if value != "" else "")
+            cell.border    = border
             cell.alignment = body_align
-            if key == "error" and value:
-                cell.font = err_font
-            else:
-                cell.font = body_font
+            cell.font      = err_font if key == "error" and value else body_font
             if fill.fill_type:
-                cell.fill = fill
+                cell.fill  = fill
 
-        ws.row_dimensions[row_idx].height = 13.5
-        # max(
-        #     30, 15 * (str(row.get("evidence", "")).count("\n") + 1)
-        # )
+        ws.row_dimensions[row_idx].height = max(
+            60, 15 * (str(row.get("evidence", "")).count("\n") + 1)
+        )
 
     # ── Freeze header & add auto-filter ────────────────────────────────────
     ws.freeze_panes = "A2"

@@ -25,7 +25,7 @@ export function useAnalyzer(): AnalyzerState {
   const [progress, setProgressState]    = useState<ProgressState>({ pct: 0, label: "" });
   const [logs, setLogs]                 = useState<AnalyzerState["logs"]>([]);
   const [downloadUrl, setDownloadUrl]   = useState<string | null>(null);
-  const [downloadName, setDownloadName] = useState<string>("crash_analysis.xlsx");
+  const [downloadName, setDownloadName] = useState<string>("crash_analysis.zip");
 
   /** Ref to the indeterminate-progress interval so we can cancel it. */
   const tickerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -151,19 +151,19 @@ export function useAnalyzer(): AnalyzerState {
         throw new Error(`Server error ${resp.status}: ${text}`);
       }
 
-      setProgress(90, "Generating Excel…");
-      pushLog("✓ Analysis complete — building Excel report…", "ok");
+      setProgress(90, "Generating archive…");
+      pushLog("✓ Analysis complete — building report archive…", "ok");
 
       const blob = await resp.blob();
       const url  = URL.createObjectURL(blob);
       const name =
         (resp.headers.get("Content-Disposition") ?? "")
-          .match(/filename="?([^"]+)"?/)?.[1] ?? "crash_analysis.xlsx";
+          .match(/filename="?([^"]+)"?/)?.[1] ?? "crash_analysis.zip";
 
       setDownloadUrl(url);
       setDownloadName(name);
       setProgress(100, "Done!");
-      pushLog("✓ Excel report ready for download.", "ok");
+      pushLog("✓ ZIP archive ready for download.", "ok");
 
       // Brief pause so the 100% state is visible before the result panel appears.
       setTimeout(() => setPhase("done"), 300);
@@ -185,7 +185,7 @@ export function useAnalyzer(): AnalyzerState {
     setLogs([]);
     setProgressState({ pct: 0, label: "" });
     setDownloadUrl(null);
-    setDownloadName("crash_analysis.xlsx");
+    setDownloadName("crash_analysis.zip");
   }, [stopTicker]);
 
   // ── Public API ─────────────────────────────────────────────────────────────

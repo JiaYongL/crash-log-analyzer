@@ -26,7 +26,7 @@ export default function ResultPanel({ fileCount, downloadUrl, downloadName, onRe
           </h2>
           <p style={{ fontSize: 14, color: "var(--text-mid)", maxWidth: 340 }}>
             {fileCount} log {fileCount === 1 ? "file" : "files"} analysed successfully.
-            Your Excel report is ready to download.
+            Your ZIP archive (Excel + grouped folders) is ready.
           </p>
         </div>
 
@@ -43,7 +43,7 @@ export default function ResultPanel({ fileCount, downloadUrl, downloadName, onRe
           onMouseEnter={(e) => { const el = e.currentTarget as HTMLAnchorElement; el.style.background = "var(--accent-dark)"; el.style.transform = "translateY(-1px)"; el.style.boxShadow = "0 6px 18px rgba(217,119,87,.35)"; }}
           onMouseLeave={(e) => { const el = e.currentTarget as HTMLAnchorElement; el.style.background = "var(--accent)"; el.style.transform = "none"; el.style.boxShadow = "0 3px 12px rgba(217,119,87,.3)"; }}
         >
-          <IconDownload/> Download .xlsx
+          <IconDownload/> Download .zip
         </a>
 
         {/* Reset */}
