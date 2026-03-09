@@ -116,13 +116,14 @@ def analyze():
         # Build ZIP (Excel + reorganised directory tree) while tmp_root exists
         zip_bytes = _build_grouped_zip(rows, tmp_root, xlsx_bytes, xlsx_filename)
 
-    return send_file(
+    resp = send_file(
         io.BytesIO(zip_bytes),
         mimetype="application/zip",
         as_attachment=True,
         download_name=zip_filename,
     )
-
+    resp.headers["Access-Control-Expose-Headers"] = "Content-Disposition"
+    return resp
 
 # ---------------------------------------------------------------------------
 # Helpers — analysis
